@@ -13,7 +13,9 @@ const uploadOnCloudinary = async (localFilePath) => {
 
     // upload the file on cloudinary
     const response = await cloudinary.uploader.upload(localFilePath, {
-      resource_type: "",
+      resource_type: "raw",
+      use_filename: true,
+      folder: "student_data",
     });
 
     fs.unlinkSync(localFilePath);

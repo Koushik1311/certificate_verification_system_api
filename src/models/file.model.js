@@ -8,8 +8,6 @@ const fileSchema = new Schema(
     },
     isExtracted: {
       type: Boolean,
-      required: true,
-      default: false,
     },
   },
   {
