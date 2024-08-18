@@ -7,6 +7,7 @@ const certificateSchema = new Schema(
       type: String,
       required: true,
       trim: true,
+      index: true,
     },
     student: {
       type: String,
