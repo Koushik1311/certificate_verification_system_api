@@ -23,7 +23,7 @@ import certificateRouter from "./routes/certificate.routes.js";
 
 // routes declaration
 app.use("/api/v1/users", userRouter);
-app.use("/api/v1/file", fileRouter);
-app.use("/api/v1/certificate", certificateRouter);
+app.use("/api/v1/files", fileRouter);
+app.use("/api/v1/certificates", certificateRouter);
 
 export { app };
