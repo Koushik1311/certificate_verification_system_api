@@ -20,6 +20,7 @@ const uploadFile = asyncHandler(async (req, res) => {
   const file = await File.create({
     fileUrl: response.url,
     isExtracted: false,
+    owner: req.user._id,
   });
 
   const uploadedFile = await File.findById(file._id);
