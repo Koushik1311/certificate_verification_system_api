@@ -5,6 +5,7 @@ import { ApiError } from "../utils/ApiError.js";
 import axios from "axios";
 import * as XLSX from "xlsx";
 import { Certificate } from "../models/certificate.model.js";
+import PDFDocument from "pdfkit";
 
 function excelDateToJsDate(serial) {
   const epoch = new Date(1900, 0, 1);
@@ -13,6 +14,60 @@ function excelDateToJsDate(serial) {
 
   return correctedDate;
 }
+
+const getAllCertificates = asyncHandler(async (req, res) => {
+  const certificates = await Certificate.find();
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, certificates, "Certificate retrieved successfully")
+    );
+});
+
+const getCertificateByCertificateId = asyncHandler(async (req, res) => {
+  const { certificateId } = req.params;
+
+  const certificate = await Certificate.findOne({
+    certificateId,
+  });
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, certificate, "Certificate found"));
+});
+
+const downloadCertificate = asyncHandler(async (req, res) => {
+  const { certificateId } = req.params;
+
+  const certificate = await Certificate.findOne({ certificateId });
+
+  if (!certificate) {
+    return res
+      .status(404)
+      .json(new ApiResponse(404, null, "Certificate not found"));
+  }
+
+  const doc = new PDFDocument();
+
+  res.setHeader(
+    "Content-disposition",
+    `attachment; filename=${certificateId}.pdf`
+  );
+  res.setHeader("Content-type", "application/pdf");
+
+  doc.pipe(res);
+
+  doc.fontSize(16).text("Certificate of Achievement", { align: "center" });
+  doc.moveDown();
+  doc.fontSize(12).text(`Student Name: ${certificate.studentName}`);
+  doc.text(`Internship Domain: ${certificate.internshipDomain}`);
+  doc.text(`Starting Date: ${certificate.startingDate}`);
+  doc.text(`Ending Date: ${certificate.endingDate}`);
+  doc.text(`Certificate ID: ${certificate.certificateId}`);
+
+  doc.end();
+});
 
 const saveCertificate = asyncHandler(async (req, res) => {
   const { id } = req.body;
@@ -61,6 +116,7 @@ const saveCertificate = asyncHandler(async (req, res) => {
   });
 
   const savedCertificates = await Promise.all(savePromises);
+  await File.updateOne({ _id: id }, { $set: { isExtracted: true } });
 
   return res
     .status(200)
@@ -69,4 +125,56 @@ const saveCertificate = asyncHandler(async (req, res) => {
     );
 });
 
-export { saveCertificate };
+const deleteCertificate = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const result = await Certificate.deleteOne({
+    _id: id,
+  });
+
+  if (result.deletedCount === 0) {
+    return res
+      .status(404)
+      .json(new ApiResponse(404, {}, "Certificate not found"));
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Certificate deleted successfully"));
+});
+
+const updateCertificate = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { studentName, internshipDomain, startingDate, endingDate } = req.body;
+
+  const updateData = {};
+  if (studentName) updateData.studentName = studentName;
+  if (internshipDomain) updateData.internshipDomain = internshipDomain;
+  if (startingDate) updateData.startingDate = startingDate;
+  if (endingDate) updateData.endingDate = endingDate;
+
+  const updatedCertificate = await Certificate.findByIdAndUpdate(
+    id,
+    { $set: updateData },
+    { new: true, runValidators: true }
+  );
+
+  if (!updatedCertificate) {
+    return res
+      .status(404)
+      .json(new ApiResponse(404, {}, "Certificate not found"));
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Certificate updated successfully"));
+});
+
+export {
+  getAllCertificates,
+  getCertificateByCertificateId,
+  saveCertificate,
+  downloadCertificate,
+  deleteCertificate,
+  updateCertificate,
+};
