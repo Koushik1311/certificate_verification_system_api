@@ -48,7 +48,7 @@ const downloadCertificate = asyncHandler(async (req, res) => {
       .json(new ApiResponse(404, null, "Certificate not found"));
   }
 
-  const doc = new PDFDocument();
+  const doc = new PDFDocument({ size: "A4", margin: 50 });
 
   res.setHeader(
     "Content-disposition",
@@ -58,13 +58,148 @@ const downloadCertificate = asyncHandler(async (req, res) => {
 
   doc.pipe(res);
 
-  doc.fontSize(16).text("Certificate of Achievement", { align: "center" });
-  doc.moveDown();
-  doc.fontSize(12).text(`Student Name: ${certificate.studentName}`);
-  doc.text(`Internship Domain: ${certificate.internshipDomain}`);
-  doc.text(`Starting Date: ${certificate.startingDate}`);
-  doc.text(`Ending Date: ${certificate.endingDate}`);
-  doc.text(`Certificate ID: ${certificate.certificateId}`);
+  // Colors and fonts
+  const primary = "#0D3B66";
+  const accent = "#F4D35E";
+  const dark = "#222222";
+
+  // Page dims
+  const { width, height } = doc.page;
+
+  // Border
+  doc
+    .lineWidth(3)
+    .strokeColor(primary)
+    .rect(20, 20, width - 40, height - 40)
+    .stroke();
+
+  // Inner border
+  doc
+    .lineWidth(1)
+    .strokeColor(accent)
+    .rect(30, 30, width - 60, height - 60)
+    .stroke();
+
+  // Title
+  doc
+    .fillColor(primary)
+    .font("Times-Bold")
+    .fontSize(28)
+    .text("CERTIFICATE OF ACHIEVEMENT", 0, 90, { align: "center" });
+
+  // Subtitle
+  doc
+    .moveDown(0.5)
+    .font("Times-Roman")
+    .fontSize(14)
+    .fillColor(dark)
+    .text("This is to certify that", { align: "center" });
+
+  // Recipient
+  doc
+    .moveDown(0.5)
+    .font("Times-Bold")
+    .fontSize(24)
+    .fillColor(dark)
+    .text(certificate.studentName, { align: "center" });
+
+  // Body
+  const startDate = new Date(certificate.startingDate).toLocaleDateString(
+    "en-US",
+    { year: "numeric", month: "long", day: "numeric" }
+  );
+  const endDate = new Date(certificate.endingDate).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
+  doc
+    .moveDown(1)
+    .font("Times-Roman")
+    .fontSize(14)
+    .fillColor(dark)
+    .text(
+      `has successfully completed an internship in ${certificate.internshipDomain}.`,
+      { align: "center" }
+    )
+    .moveDown(0.5)
+    .text(`Internship Period: ${startDate} — ${endDate}`, { align: "center" });
+
+  // Decorative rule
+  doc
+    .moveDown(1.2)
+    .strokeColor(primary)
+    .lineWidth(1)
+    .moveTo(100, doc.y)
+    .lineTo(width - 100, doc.y)
+    .stroke();
+
+  // Footer details
+  const footerY = height - 160;
+
+  // Signature images (exact file paths from public/image)
+  const path = (await import("path")).default;
+  const authorizedSigPath = path.join(
+    process.cwd(),
+    "public",
+    "image",
+    "Anika Sharma.png"
+  );
+  const directorSigPath = path.join(
+    process.cwd(),
+    "public",
+    "image",
+    "Raj Mehta.png"
+  );
+
+  // Signature images (placed a bit lower and larger)
+  const sigY = footerY - 40; // was -55
+  const sigWidth = 180; // a bit wider
+
+  doc.image(authorizedSigPath, 85, sigY, { width: sigWidth });
+  doc.image(directorSigPath, width - 265, sigY, { width: sigWidth });
+
+  // Signature lines
+  doc
+    .strokeColor(dark)
+    .lineWidth(1)
+    .moveTo(80, footerY)
+    .lineTo(260, footerY)
+    .stroke()
+    .moveTo(width - 260, footerY)
+    .lineTo(width - 80, footerY)
+    .stroke();
+
+  // Labels
+  doc
+    .font("Times-Roman")
+    .fontSize(12)
+    .fillColor(dark)
+    .text("Authorized Signature", 80, footerY + 6, {
+      width: 180,
+      align: "center",
+    })
+    .text("Program Director", width - 260, footerY + 6, {
+      width: 180,
+      align: "center",
+    });
+
+  // Metadata row
+  const issuedOn = new Date().toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
+  doc
+    .fontSize(10)
+    .fillColor("#555555")
+    .text(`Certificate ID: ${certificate.certificateId}`, 80, height - 80)
+    .text(`Issued on: ${issuedOn}`, width - 260, height - 80, {
+      width: 180,
+      align: "right",
+    });
 
   doc.end();
 });
